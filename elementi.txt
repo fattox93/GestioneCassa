@@ -1,2 +1,3 @@
-Panino,3.00,0
-Birra,2.00,0
+Panino,3.0,4
+Birra,2.0,3
+Rustii,5.0,2

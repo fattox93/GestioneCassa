@@ -3,19 +3,23 @@ package application;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 import elementiGrafici.BottoneElemento;
 import entity.Elemento;
 import entity.ElementoScontrino;
 import entity.Scontrino;
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -28,6 +32,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
+
 
 public class Main extends Application {
 	
@@ -54,8 +59,59 @@ public class Main extends Application {
 			scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
 
 			inizializzaRiepilogo(root);
+			inizializzaPaneAggiuntaElemento(root);
 			inizializzaBottoniElementi(primaryStage);
+			
+			caricaStoricoScontrini();
 
+			//operazioni da eseguire quando si chiude l'applicazione (salvare tutte le informazioni)
+			primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+				@Override public void handle(WindowEvent t) {
+					System.out.println("Save all information in file xyz.txt");
+					try{
+						PrintWriter writer = new PrintWriter("elementi.txt");
+						for (Elemento elemento : Main.elementi) {
+							writer.println(elemento.getNome() + "," + elemento.getCosto() + "," + elemento.getNumeroVendite());
+						}
+						writer.close();
+
+						//necessario anche salvare tutti gli scontrini e in apertura ricaricarli (oppure rivedere il totale utilizzando solo gli elementi e il numero al loro interno)
+						//creo json per poi salvarlo in un nuovo file
+						
+						JSONObject storicoScontrini = new JSONObject();
+						JSONArray elementi = new JSONArray();
+						//ciclo tutti gli scontrini
+						for (Scontrino scontrino : Main.storicoScontrini) {
+							JSONObject tempScontrino = new JSONObject();
+							tempScontrino.put("data", scontrino.getDataCreazione());
+							tempScontrino.put("totale", scontrino.getTotaleScontrino());
+							
+							JSONArray elem = new JSONArray();
+							//ciclo tutti gli elementi dello scontrino per salvarli
+							for (ElementoScontrino elemScontrino : scontrino.getListaElementi()) {
+								JSONObject temp = new JSONObject();
+								temp.put("costo", elemScontrino.getCosto());
+								temp.put("nome", elemScontrino.getNome());
+								elem.put(temp);
+							}
+							tempScontrino.put("elementi", elem);
+							elementi.put(tempScontrino);
+						}
+						
+						storicoScontrini.put("elementi", elementi);
+						writer = new PrintWriter("storico.txt");
+						writer.print(storicoScontrini.toString());
+						writer.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+
+				}
+			});
+
+
+
+			//Vedere poi dove metterlo magari in un menu in alto
 			Button bottoneTest = new Button("Test");
 			root.setBottom(bottoneTest);
 
@@ -80,60 +136,6 @@ public class Main extends Application {
 				}
 			});
 
-
-			//-------------------Creazione Pane per nuovo bottone--------------------
-			VBox nuovoBottonePane = new VBox();
-			nuovoBottonePane.setAlignment(Pos.CENTER);
-			Text labelNome = new Text("Nome Bottone");
-			Text labelCosto = new Text("Costo");
-			TextField textFieldNome = new TextField ();
-			TextField textFieldCosto = new TextField ();
-
-			Button salvaNuovoBottone = new Button("Salva");
-			salvaNuovoBottone.setOnAction(new EventHandler<ActionEvent>() {
-
-				@Override
-				public void handle(ActionEvent event) {
-					//recupero i valori nome e costo del nuovo bottone
-					String nome = textFieldNome.getText();
-
-					//attenzione possibile errore di parsing (gestire exception)
-					double costo = Double.parseDouble(textFieldCosto.getText());
-
-					//creo nuovo elemento, bisogna salvarlo nel file in modo che resti salvato anche alla prossima apertura
-					Elemento nuovoElemento = new Elemento(nome, costo, 0);
-					Main.elementi.add(nuovoElemento);
-					BottoneElemento nuovoBottone = new BottoneElemento(nuovoElemento);
-					listaBottoniElementi.add(nuovoBottone);
-
-					//aggiungo il listener
-					nuovoBottone.setOnAction(new EventHandler<ActionEvent>() {
-
-						@Override
-						public void handle(ActionEvent event) {
-							Elemento elemento = nuovoBottone.getElemento();
-
-							if(scontrino == null){
-								scontrino = new Scontrino(Main.storicoScontrini.size());
-								scontrino.aggiungiElemento(elemento);
-							}else{
-								scontrino.aggiungiElemento(elemento);
-							}
-						}
-					});
-
-					nuovoBottone.setPrefSize(150, 80);
-					flowPaneBottoni.getChildren().add(nuovoBottone);
-
-				}
-			});
-
-			nuovoBottonePane.getChildren().addAll(labelNome, textFieldNome, labelCosto, textFieldCosto, salvaNuovoBottone);
-
-			root.setLeft(nuovoBottonePane);
-			//-------------------------------------------------------------------------
-
-
 			primaryStage.setScene(scene);
 			primaryStage.show();
 		} catch(Exception e) {
@@ -144,18 +146,16 @@ public class Main extends Application {
 	public static void main(String[] args) {
 		launch(args);
 	}
-	
+
 	private boolean caricaElementi(){
-
-		String fileName = "elementi.txt";
-
 		try {
-			BufferedReader input = new BufferedReader(new FileReader(fileName));
+			BufferedReader input = new BufferedReader(new FileReader("elementi.txt"));
 			String riga;
-
+			
 			//ciclo per leggere tutte le righe del file degli elementi
 			while ((riga = input.readLine()) != null) {
 				System.out.println(riga);
+
 				//ogni riga la scompongo estraendo le informazioni
 				List<String> listaInformazioni= Arrays.asList(riga.split(","));
 
@@ -173,16 +173,43 @@ public class Main extends Application {
 		}
 	}
 	
+	private boolean caricaStoricoScontrini(){
+//		try {
+//			BufferedReader input = new BufferedReader(new FileReader("storico.txt"));
+//			String riga;
+//			
+//			//ciclo per leggere tutte le righe del file degli elementi
+//			while ((riga = input.readLine()) != null) {
+//				System.out.println(riga);
+//
+//				//ogni riga la scompongo estraendo le informazioni
+//				List<String> listaInformazioni= Arrays.asList(riga.split(","));
+//
+//				Elemento elem = new Elemento(listaInformazioni.get(0), Double.parseDouble(listaInformazioni.get(1)), Integer.parseInt(listaInformazioni.get(2)));
+//				Main.elementi.add(elem);
+//			}
+//
+//			input.close();
+//
+//			return true;
+//		} catch (IOException ioException) {
+//			System.out.println("errore nella lettura del file");
+//			ioException.printStackTrace();
+//			return false;
+//		}
+		return true;
+	}
+
 	private void inizializzaBottoniElementi(Stage primaryStage){
 
 		// lettura da file degli elementi con relativi costi e quantità
 		boolean risultatoCarica = caricaElementi();
-		
+
 		if(!risultatoCarica){
 			Alert alert = new Alert(AlertType.ERROR);
 			alert.setTitle("Messaggio di ERRORE");
 			alert.setHeaderText("Errore di lettura");
-			
+
 			//Aggiungere il bottone inizializzaBottoni in caso di errore
 			alert.setContentText("Errore nel nome del file degli elementi controlla la posizione e la sintassi! Poi premere il bottone inizializza elementi");
 			alert.showAndWait();
@@ -215,7 +242,7 @@ public class Main extends Application {
 			bottoneElemento.setPrefSize(150, 80);
 		}
 	}	
-	
+
 	private void inizializzaRiepilogo(BorderPane root){
 
 		BorderPane riepilogo = new BorderPane();
@@ -253,5 +280,59 @@ public class Main extends Application {
 				}
 			}
 		});
+	}
+
+	private void inizializzaPaneAggiuntaElemento(BorderPane root) {
+
+		VBox nuovoBottonePane = new VBox();
+		nuovoBottonePane.setAlignment(Pos.CENTER);
+		Text labelNome = new Text("Nome Bottone");
+		Text labelCosto = new Text("Costo");
+		TextField textFieldNome = new TextField ();
+		TextField textFieldCosto = new TextField ();
+
+		Button salvaNuovoBottone = new Button("Salva");
+		salvaNuovoBottone.setOnAction(new EventHandler<ActionEvent>() {
+
+			@Override
+			public void handle(ActionEvent event) {
+				//recupero i valori nome e costo del nuovo bottone
+				String nome = textFieldNome.getText();
+
+				//attenzione possibile errore di parsing (gestire exception)
+				double costo = Double.parseDouble(textFieldCosto.getText());
+
+				//creo nuovo elemento, bisogna salvarlo nel file in modo che resti salvato anche alla prossima apertura
+				Elemento nuovoElemento = new Elemento(nome, costo, 0);
+				Main.elementi.add(nuovoElemento);
+				BottoneElemento nuovoBottone = new BottoneElemento(nuovoElemento);
+				listaBottoniElementi.add(nuovoBottone);
+
+				//aggiungo il listener
+				nuovoBottone.setOnAction(new EventHandler<ActionEvent>() {
+
+					@Override
+					public void handle(ActionEvent event) {
+						Elemento elemento = nuovoBottone.getElemento();
+
+						if(scontrino == null){
+							scontrino = new Scontrino(Main.storicoScontrini.size());
+							scontrino.aggiungiElemento(elemento);
+						}else{
+							scontrino.aggiungiElemento(elemento);
+						}
+					}
+				});
+
+				nuovoBottone.setPrefSize(150, 80);
+				flowPaneBottoni.getChildren().add(nuovoBottone);
+
+			}
+		});
+
+		nuovoBottonePane.getChildren().addAll(labelNome, textFieldNome, labelCosto, textFieldCosto, salvaNuovoBottone);
+
+		root.setLeft(nuovoBottonePane);
+
 	}
 }
