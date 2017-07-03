@@ -30,7 +30,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 
 public class Main extends Application {
-
+	//prova git
 	//elementi grafici
 	//gli elementi si possono togliere e usare semplicemente il flowpaneBottoni dal quale è possibile ottenere i bottoni i
 	//quali al loro interno hanno un campo elemento (Da rivedere)
