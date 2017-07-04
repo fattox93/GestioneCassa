@@ -34,4 +34,16 @@ public class Elemento {
 	public int getNumeroVendite() {
 		return this.numeroVendite;
 	}
+	
+	public void setCosto(double costo) {
+		this.costo = costo;
+	}
+	
+	public void setNome(String nome) {
+		this.nome = nome;
+	}
+	
+	public void setNumeroVendite(int numeroVendite) {
+		this.numeroVendite = numeroVendite;
+	}
 }

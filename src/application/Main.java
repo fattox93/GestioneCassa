@@ -4,15 +4,9 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 import elementiGrafici.BottoneElemento;
@@ -40,7 +34,6 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 
-
 public class Main extends Application {
 
 	//elementi grafici
@@ -55,7 +48,6 @@ public class Main extends Application {
 	private static Scontrino scontrino = null;
 	private static List<Scontrino> storicoScontrini = new ArrayList<>();
 
-
 	@Override
 	public void start(Stage primaryStage) {
 		try {
@@ -64,64 +56,28 @@ public class Main extends Application {
 			flowPaneBottoni.setAlignment(Pos.CENTER);
 			Scene scene = new Scene(root,1400,800);
 			scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
-
+			
+			impostaChiusura(primaryStage);
 			inizializzaRiepilogo(root);
 			inizializzaPaneAggiuntaElemento(root);
 			inizializzaBottoniElementi(primaryStage);
+			boolean riuscitaCaricamentoScontrini = caricaStoricoScontrini();
+			
+			if(!riuscitaCaricamentoScontrini){
+				Alert alert = new Alert(AlertType.ERROR);
+				alert.setTitle("Messaggio di ERRORE");
+				alert.setHeaderText("Errore di caricamento dello storico degli scontrini");
 
-			caricaStoricoScontrini();
-
-			//operazioni da eseguire quando si chiude l'applicazione (salvare tutte le informazioni)
-			primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
-				@Override public void handle(WindowEvent t) {
-					System.out.println("Save all information in file xyz.txt");
-					try{
-						PrintWriter writer = new PrintWriter("elementi.txt");
-						for (Elemento elemento : Main.elementi) {
-							writer.println(elemento.getNome() + "," + elemento.getCosto() + "," + elemento.getNumeroVendite());
-						}
-						writer.close();
-
-						//necessario anche salvare tutti gli scontrini e in apertura ricaricarli (oppure rivedere il totale utilizzando solo gli elementi e il numero al loro interno)
-						//creo json per poi salvarlo in un nuovo file
-
-						JSONObject storicoScontrini = new JSONObject();
-						JSONArray elementi = new JSONArray();
-						//ciclo tutti gli scontrini
-						for (Scontrino scontrino : Main.storicoScontrini) {
-							JSONObject tempScontrino = new JSONObject();
-							tempScontrino.put("data", scontrino.getDataCreazione());
-							tempScontrino.put("totale", scontrino.getTotaleScontrino());
-							tempScontrino.put("numero", scontrino.getNumeroScontrino());
-
-							JSONArray elem = new JSONArray();
-							//ciclo tutti gli elementi dello scontrino per salvarli
-							for (ElementoScontrino elemScontrino : scontrino.getListaElementi()) {
-								JSONObject temp = new JSONObject();
-								temp.put("costo", elemScontrino.getCosto());
-								temp.put("nome", elemScontrino.getNome());
-								elem.put(temp);
-							}
-							tempScontrino.put("oggetti", elem);
-							elementi.put(tempScontrino);
-						}
-
-						storicoScontrini.put("elementi", elementi);
-						writer = new PrintWriter("storico.txt");
-						writer.print(storicoScontrini.toString());
-						writer.close();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-
-				}
-			});
-
-
-
+				//Aggiungere il bottone inizializzaBottoni in caso di errore
+				alert.setContentText("Errore nel caricare il file dello storico degli scontrini controlla la posizione e la sintassi!");
+				alert.showAndWait();
+			}
+			
+			
+			FlowPane paneTest = new FlowPane();
 			//Vedere poi dove metterlo magari in un menu in alto
 			Button bottoneTest = new Button("Test");
-			root.setBottom(bottoneTest);
+			root.setBottom(paneTest);
 
 			// Stampa lo storico di tutti gli scontrini
 			bottoneTest.setOnAction(new EventHandler<ActionEvent>() {
@@ -143,7 +99,30 @@ public class Main extends Application {
 					System.out.println("Incasso totale scontrini:\t" + ricavoTotale);
 				}
 			});
+			
+			
+			Button resetElementi = new Button("Inizia nuovo evento");
+			
+			//magari mettere la richiesta di una conferma
+			resetElementi.setOnAction(new EventHandler<ActionEvent>() {
 
+				@Override
+				public void handle(ActionEvent event) {
+					//impostare a zero tutti i counter degli elementi e reinizializzare lo storico scontrini
+					for (Elemento elem : elementi) {
+						elem.setNumeroVendite(0);
+					}
+					
+					//elimino lo scontrino in corso
+					if(Main.scontrino != null){
+						Main.totaleCosto.setText("0.00");
+						Main.scontrino = null;
+					}
+					Main.storicoScontrini = new ArrayList<>();
+				}
+			});
+
+			paneTest.getChildren().addAll(resetElementi,bottoneTest);
 			primaryStage.setScene(scene);
 			primaryStage.show();
 		} catch(Exception e) {
@@ -305,7 +284,7 @@ public class Main extends Application {
 			@Override
 			public void handle(ActionEvent event) {
 
-				if(scontrino != null){
+				if(Main.scontrino != null){
 					Main.scontrino.stampaScontrino();
 					Main.storicoScontrini.add(scontrino);
 					Main.totaleCosto.setText("0.00");
@@ -367,5 +346,50 @@ public class Main extends Application {
 
 		root.setLeft(nuovoBottonePane);
 
+	}
+	
+	private void impostaChiusura(Stage primaryStage){
+		//operazioni da eseguire quando si chiude l'applicazione (salvare tutte le informazioni)
+		primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+			@Override public void handle(WindowEvent t) {
+				System.out.println("Save all information in file xyz.txt");
+				try{
+					PrintWriter writer = new PrintWriter("elementi.txt");
+					for (Elemento elemento : Main.elementi) {
+						writer.println(elemento.getNome() + "," + elemento.getCosto() + "," + elemento.getNumeroVendite());
+					}
+					writer.close();
+
+					JSONObject storicoScontrini = new JSONObject();
+					JSONArray elementi = new JSONArray();
+					
+					//ciclo tutti gli scontrini
+					for (Scontrino scontrino : Main.storicoScontrini) {
+						JSONObject tempScontrino = new JSONObject();
+						tempScontrino.put("data", scontrino.getDataCreazione());
+						tempScontrino.put("totale", scontrino.getTotaleScontrino());
+						tempScontrino.put("numero", scontrino.getNumeroScontrino());
+
+						JSONArray elem = new JSONArray();
+						//ciclo tutti gli elementi dello scontrino per salvarli
+						for (ElementoScontrino elemScontrino : scontrino.getListaElementi()) {
+							JSONObject temp = new JSONObject();
+							temp.put("costo", elemScontrino.getCosto());
+							temp.put("nome", elemScontrino.getNome());
+							elem.put(temp);
+						}
+						tempScontrino.put("oggetti", elem);
+						elementi.put(tempScontrino);
+					}
+
+					storicoScontrini.put("elementi", elementi);
+					writer = new PrintWriter("storico.txt");
+					writer.print(storicoScontrini.toString());
+					writer.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		});
 	}
 }
