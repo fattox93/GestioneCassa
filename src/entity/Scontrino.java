@@ -1,6 +1,8 @@
 package entity;
 
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 
 import application.Main;
@@ -8,18 +10,26 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 public class Scontrino {
-	private Date dataCreazione;
+	private String dataCreazione;
 	private ObservableList<ElementoScontrino> listaElementi;
 	private int numeroScontrino;
 	private double totaleScontrino;
 	
 	// constructor
 	public Scontrino(final int numeroScontrino) {
-		this.dataCreazione = new Date();
+		Calendar calendario = new GregorianCalendar();
+		Date data = calendario.getTime();
+		
+		this.dataCreazione = data.getDate() + "." + (data.getMonth()+1) + "." + (data.getYear()+1900) + " - " + data.getHours() + ":" +data.getMinutes() + ":" +data.getSeconds();
+		System.out.println(dataCreazione);
 		this.listaElementi = FXCollections.observableArrayList();
 		this.numeroScontrino = numeroScontrino;
 		this.totaleScontrino = 0.0;
 		Main.conteggio.setItems(this.listaElementi);
+	}
+	
+	public Scontrino(){
+		
 	}
 
 	public boolean aggiungiElemento(final Elemento elemento){
@@ -65,12 +75,32 @@ public class Scontrino {
 	public ObservableList<ElementoScontrino> getListaElementi() {
 		return this.listaElementi;
 	}
-	public Date getDataCreazione() {
+	public String getDataCreazione() {
 		return this.dataCreazione;
 	}
 	
 	public double getTotaleScontrino() {
 		return this.totaleScontrino;
+	}
+	
+	public int getNumeroScontrino() {
+		return this.numeroScontrino;
+	}
+	
+	public void setDataCreazione(String dataCreazione) {
+		this.dataCreazione = dataCreazione;
+	}
+	
+	public void setListaElementi(ObservableList<ElementoScontrino> listaElementi) {
+		this.listaElementi = listaElementi;
+	}
+	
+	public void setNumeroScontrino(int numeroScontrino) {
+		this.numeroScontrino = numeroScontrino;
+	}
+	
+	public void setTotaleScontrino(double totaleScontrino) {
+		this.totaleScontrino = totaleScontrino;
 	}
 	
 }

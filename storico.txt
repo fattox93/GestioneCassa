@@ -1,1 +1,1 @@
-{"elementi":[{"data":"Mon Jul 03 20:53:15 CEST 2017","totale":5,"elementi":[{"costo":3,"nome":"Panino"},{"costo":2,"nome":"Birra"}]},{"data":"Mon Jul 03 20:53:17 CEST 2017","totale":7,"elementi":[{"costo":5,"nome":"Rustii"},{"costo":2,"nome":"Birra"}]}]}
+{"elementi":[{"oggetti":[{"costo":3,"nome":"Panino"},{"costo":2,"nome":"Birra"}],"data":"4.7.2017 - 18:0:36","numero":0,"totale":5},{"oggetti":[{"costo":3,"nome":"Panino"},{"costo":3,"nome":"Panino"}],"data":"4.7.2017 - 18:1:41","numero":1,"totale":6}]}

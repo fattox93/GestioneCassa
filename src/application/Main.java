@@ -4,9 +4,14 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -15,6 +20,8 @@ import entity.Elemento;
 import entity.ElementoScontrino;
 import entity.Scontrino;
 import javafx.application.Application;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
@@ -35,7 +42,7 @@ import javafx.scene.text.Text;
 
 
 public class Main extends Application {
-	
+
 	//elementi grafici
 	//gli elementi si possono togliere e usare semplicemente il flowpaneBottoni dal quale è possibile ottenere i bottoni i
 	//quali al loro interno hanno un campo elemento (Da rivedere)
@@ -61,7 +68,7 @@ public class Main extends Application {
 			inizializzaRiepilogo(root);
 			inizializzaPaneAggiuntaElemento(root);
 			inizializzaBottoniElementi(primaryStage);
-			
+
 			caricaStoricoScontrini();
 
 			//operazioni da eseguire quando si chiude l'applicazione (salvare tutte le informazioni)
@@ -77,7 +84,7 @@ public class Main extends Application {
 
 						//necessario anche salvare tutti gli scontrini e in apertura ricaricarli (oppure rivedere il totale utilizzando solo gli elementi e il numero al loro interno)
 						//creo json per poi salvarlo in un nuovo file
-						
+
 						JSONObject storicoScontrini = new JSONObject();
 						JSONArray elementi = new JSONArray();
 						//ciclo tutti gli scontrini
@@ -85,7 +92,8 @@ public class Main extends Application {
 							JSONObject tempScontrino = new JSONObject();
 							tempScontrino.put("data", scontrino.getDataCreazione());
 							tempScontrino.put("totale", scontrino.getTotaleScontrino());
-							
+							tempScontrino.put("numero", scontrino.getNumeroScontrino());
+
 							JSONArray elem = new JSONArray();
 							//ciclo tutti gli elementi dello scontrino per salvarli
 							for (ElementoScontrino elemScontrino : scontrino.getListaElementi()) {
@@ -94,10 +102,10 @@ public class Main extends Application {
 								temp.put("nome", elemScontrino.getNome());
 								elem.put(temp);
 							}
-							tempScontrino.put("elementi", elem);
+							tempScontrino.put("oggetti", elem);
 							elementi.put(tempScontrino);
 						}
-						
+
 						storicoScontrini.put("elementi", elementi);
 						writer = new PrintWriter("storico.txt");
 						writer.print(storicoScontrini.toString());
@@ -151,7 +159,7 @@ public class Main extends Application {
 		try {
 			BufferedReader input = new BufferedReader(new FileReader("elementi.txt"));
 			String riga;
-			
+
 			//ciclo per leggere tutte le righe del file degli elementi
 			while ((riga = input.readLine()) != null) {
 				System.out.println(riga);
@@ -172,32 +180,57 @@ public class Main extends Application {
 			return false;
 		}
 	}
-	
+
 	private boolean caricaStoricoScontrini(){
-//		try {
-//			BufferedReader input = new BufferedReader(new FileReader("storico.txt"));
-//			String riga;
-//			
-//			//ciclo per leggere tutte le righe del file degli elementi
-//			while ((riga = input.readLine()) != null) {
-//				System.out.println(riga);
-//
-//				//ogni riga la scompongo estraendo le informazioni
-//				List<String> listaInformazioni= Arrays.asList(riga.split(","));
-//
-//				Elemento elem = new Elemento(listaInformazioni.get(0), Double.parseDouble(listaInformazioni.get(1)), Integer.parseInt(listaInformazioni.get(2)));
-//				Main.elementi.add(elem);
-//			}
-//
-//			input.close();
-//
-//			return true;
-//		} catch (IOException ioException) {
-//			System.out.println("errore nella lettura del file");
-//			ioException.printStackTrace();
-//			return false;
-//		}
-		return true;
+		try {
+			BufferedReader input = new BufferedReader(new FileReader("storico.txt"));
+			String riga;
+			StringBuilder strb = new StringBuilder();
+			//ciclo per leggere tutte le righe del file degli elementi
+			while ((riga = input.readLine()) != null) {
+				strb.append(riga);
+			}
+			
+			if(strb.length() == 0){
+				System.out.println("file vuoto");
+				input.close();
+				return true;
+			}
+
+			System.out.println("finito di leggere lo storico creo il jsonobject");
+			JSONObject storicoScontrini = new JSONObject(strb.toString());
+			JSONArray elementi = (JSONArray) storicoScontrini.get("elementi");
+
+		
+			for(int i=0; i<elementi.length(); i++){
+				JSONObject tempScontrino = elementi.getJSONObject(i);
+				System.out.println(tempScontrino.getString("data"));
+				Scontrino s = new Scontrino();
+				
+				s.setDataCreazione(tempScontrino.getString("data"));
+				s.setNumeroScontrino(tempScontrino.getInt("numero"));
+				s.setTotaleScontrino(tempScontrino.getDouble("totale"));
+				
+				//carico gli elementi dello scontrino
+				JSONArray elem = tempScontrino.getJSONArray("oggetti");
+				ObservableList<ElementoScontrino> elementiScontrino = FXCollections.observableArrayList();
+				
+				for(int j=0; j<elem.length(); j++){
+					JSONObject rigaScontrino = elem.getJSONObject(j);
+					ElementoScontrino elementoScontrino = new ElementoScontrino(rigaScontrino.getString("nome"), rigaScontrino.getDouble("costo"));
+					elementiScontrino.add(elementoScontrino);
+				}
+				s.setListaElementi(elementiScontrino);
+				Main.storicoScontrini.add(s);
+			}
+			
+			input.close();
+			return true;
+		} catch (IOException ioException) {
+			System.out.println("errore nella lettura del file");
+			ioException.printStackTrace();
+			return false;
+		}
 	}
 
 	private void inizializzaBottoniElementi(Stage primaryStage){
